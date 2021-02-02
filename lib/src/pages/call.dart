@@ -12,20 +12,24 @@ class CallPage extends StatefulWidget {
   final String channelName;
 
   /// non-modifiable client role of the page
-  final ClientRole role;
 
   /// Creates a call page with given channel name.
-  const CallPage({Key key, this.channelName, this.role}) : super(key: key);
+  const CallPage({Key key, this.channelName,}) : super(key: key);
 
   @override
   _CallPageState createState() => _CallPageState();
 }
 
 class _CallPageState extends State<CallPage> {
+
+   ClientRole role = ClientRole.Broadcaster;
+
   final _users = <int>[];
   final _infoStrings = <String>[];
   bool muted = false;
-  RtcEngine _engine;
+   bool mutedVideo = false;
+
+   RtcEngine _engine;
 
   @override
   void dispose() {
@@ -69,7 +73,7 @@ class _CallPageState extends State<CallPage> {
     _engine = await RtcEngine.create(APP_ID);
     await _engine.enableVideo();
     await _engine.setChannelProfile(ChannelProfile.LiveBroadcasting);
-    await _engine.setClientRole(widget.role);
+    await _engine.setClientRole(role);
   }
 
   /// Add agora event handlers
@@ -112,7 +116,7 @@ class _CallPageState extends State<CallPage> {
   /// Helper function to get list of native views
   List<Widget> _getRenderViews() {
     final List<StatefulWidget> list = [];
-    if (widget.role == ClientRole.Broadcaster) {
+    if (role == ClientRole.Broadcaster) {
       list.add(RtcLocalView.SurfaceView());
     }
     _users.forEach((int uid) => list.add(RtcRemoteView.SurfaceView(uid: uid)));
@@ -147,24 +151,24 @@ class _CallPageState extends State<CallPage> {
         return Container(
             child: Column(
           children: <Widget>[
-            _expandedVideoRow([views[0]]),
-            _expandedVideoRow([views[1]])
+            mutedVideo ? Container(child: Icon(Icons.person),): _expandedVideoRow([views[0]]),
+            mutedVideo ? Container(child: Icon(Icons.person),): _expandedVideoRow([views[1]])
           ],
         ));
       case 3:
         return Container(
             child: Column(
           children: <Widget>[
-            _expandedVideoRow(views.sublist(0, 2)),
-            _expandedVideoRow(views.sublist(2, 3))
+            mutedVideo ? Container(child: Icon(Icons.person),):  _expandedVideoRow(views.sublist(0, 2)),
+            mutedVideo ? Container(child: Icon(Icons.person),):  _expandedVideoRow(views.sublist(2, 3))
           ],
         ));
       case 4:
         return Container(
             child: Column(
           children: <Widget>[
-            _expandedVideoRow(views.sublist(0, 2)),
-            _expandedVideoRow(views.sublist(2, 4))
+            mutedVideo ? Container(child: Icon(Icons.person),):  _expandedVideoRow(views.sublist(0, 2)),
+            mutedVideo ? Container(child: Icon(Icons.person),): _expandedVideoRow(views.sublist(2, 4))
           ],
         ));
       default:
@@ -174,7 +178,7 @@ class _CallPageState extends State<CallPage> {
 
   /// Toolbar layout
   Widget _toolbar() {
-    if (widget.role == ClientRole.Audience) return Container();
+   // if (role == ClientRole.Audience) return Container();
     return Container(
       alignment: Alignment.bottomCenter,
       padding: const EdgeInsets.symmetric(vertical: 48),
@@ -194,16 +198,29 @@ class _CallPageState extends State<CallPage> {
             padding: const EdgeInsets.all(12.0),
           ),
           RawMaterialButton(
+            onPressed: _onToggleMuteVideo,
+            child: Icon(
+              mutedVideo ? Icons.videocam_off : Icons.videocam,
+              color: mutedVideo ? Colors.white : Colors.blueAccent,
+              size: 20.0,
+            ),
+            shape: CircleBorder(),
+            elevation: 2.0,
+            fillColor: mutedVideo ? Colors.blueAccent : Colors.white,
+            padding: const EdgeInsets.all(12.0),
+          ),
+
+          RawMaterialButton(
             onPressed: () => _onCallEnd(context),
             child: Icon(
               Icons.call_end,
               color: Colors.white,
-              size: 35.0,
+             // size: 35.0,
             ),
             shape: CircleBorder(),
-            elevation: 2.0,
+           // elevation: 2.0,
             fillColor: Colors.redAccent,
-            padding: const EdgeInsets.all(15.0),
+            padding: const EdgeInsets.all(12.0),
           ),
           RawMaterialButton(
             onPressed: _onSwitchCamera,
@@ -287,18 +304,42 @@ class _CallPageState extends State<CallPage> {
     _engine.switchCamera();
   }
 
+  void _onToggleMuteVideo(){
+
+    setState(() {
+      mutedVideo=!mutedVideo;
+
+      if(mutedVideo){
+        _engine.muteLocalVideoStream(mutedVideo);
+       // list.add(RtcLocalView.SurfaceView());
+
+        _engine.clearVideoWatermarks();
+
+        role=ClientRole.Audience;
+
+      }
+      else {
+        _engine.muteLocalVideoStream(mutedVideo);
+        role=ClientRole.Broadcaster;
+
+
+      }
+
+    });
+   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Agora Flutter QuickStart'),
+        title: Text('Multipie Testing Quick Call'),
       ),
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.transparent,
       body: Center(
         child: Stack(
           children: <Widget>[
             _viewRows(),
-            _panel(),
+           // _panel(),
             _toolbar(),
           ],
         ),
